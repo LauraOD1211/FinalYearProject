@@ -39,7 +39,7 @@ mycursor.execute(
 # Lectures
 sql = "INSERT INTO lectures (code, name, no_slots, discipline, room_reqs, no_students) VALUES (%s, %s, %s, %s, %s, %s)"
 val = []
-for x in range(1, 41):
+for x in range(1, 51):
     code = "LEC" + str(x)
     name = "Lecture " + str(x)
     no_slots = random.randint(1, 3)
@@ -54,7 +54,7 @@ mycursor.executemany(sql, val)
 # Lecturers
 sql = "INSERT INTO lecturers (id, name, unavailable_times) VALUES (%s, %s, %s)"
 val = []
-for x in range(1, 31):
+for x in range(1, 21):
     id = x
     name = "Lecturer " + str(x)
     unavailable_times = ""
@@ -72,7 +72,7 @@ val = []
 for x in range(1, 501):
     id = x
     name = "Student " + str(x)
-    course = "Cl " + str(random.randint(1, 20))
+    course = "Cl " + str(random.randint(1, 30))
     if random.randint(1, 10) == 4:
         room_reqs = "Room " + str(random.randint(1, 3))
     val.append((id, name, course))
@@ -82,7 +82,7 @@ mycursor.executemany(sql, val)
 # Locations
 sql = "INSERT INTO locations (room_code, name, room_type, capacity, discipline, unavailable_times) VALUES (%s, %s, %s, %s, %s, %s)"
 val = []
-for x in range(1, 51):
+for x in range(1, 31):
     room_code = str(x)
     name = "Room " + str(x)
     room_type = "Room " + str(random.randint(1, 3))
@@ -103,20 +103,26 @@ mydb.commit()
 #Enrollments
 sql = "INSERT INTO enrollments (lecture, class_group) VALUES (%s, %s)"
 val = []
-enrolled = set({})
+lects_per_class= {}
 # Give each lecture students
-for x in range(1,41):
+for x in range(1,51):
     lecture_id = "LEC" + str(x)
     student_set = set({})
     course_set = set({})
-    num_students = random.randint(1,250)
-    while len(student_set) < num_students and len(course_set) < 5:
-        course = "Cl " + str(random.randint(1, 20))
-        mycursor.execute("SELECT * FROM students WHERE course = %s", [course])
-        students = mycursor.fetchall()
-        for student in students:
-            student_set.add(student[0])
-        course_set.add(course)
+    num_courses = random.randint(1,8)
+    while len(course_set) < num_courses:
+        course = "Cl " + str(random.randint(1, 30))
+        if course not in lects_per_class.keys() or lects_per_class[course] < 8:
+            print("Found suitable course")
+            if course in lects_per_class.keys():
+                lects_per_class[course] = lects_per_class[course] + 1
+            else:
+                lects_per_class[course] = 1
+            mycursor.execute("SELECT * FROM students WHERE course = %s", [course])
+            students = mycursor.fetchall()
+            for student in students:
+                student_set.add(student[0])
+            course_set.add(course)
     for course in course_set:
         val.append((lecture_id,course))
     sql2 = "UPDATE lectures SET no_students = %s WHERE code = %s"
@@ -131,14 +137,14 @@ sql = "INSERT INTO lecture_lecturers (lecture, lecturer) VALUES (%s, %s)"
 val = []
 
 # Give each lecture lecturer(s)
-for x in range(1,41):
+for x in range(1,51):
     lecture_id = "LEC" + str(x)
     lecturer_set = set({})
     num_lecturers = 1
     if random.randint(1,20) == 4:
         num_lecturers = 2
     while len(lecturer_set)<num_lecturers:
-        lecturer_set.add(random.randint(1,30))
+        lecturer_set.add(random.randint(1,20))
     for lecturer in lecturer_set:
         val.append((lecture_id,lecturer))
 # Ignore unassigned lecturers for now
