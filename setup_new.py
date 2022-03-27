@@ -5,7 +5,7 @@ mydb = mysql.connector.connect(
     host="localhost",
     user="root",
     password="geneticDatabase",
-    database="remake"
+    database="bigdata"
 )
 
 mycursor = mydb.cursor()
@@ -30,9 +30,9 @@ mycursor.execute(
 # Lectures
 sql = "INSERT INTO lectures (id, name, discipline, no_students, class_groups, lecturer) VALUES (%s, %s, %s, %s, %s, %s)"
 val = []
-for id in range(0, 50):
+for id in range(0, 500):
     name = "Lecture " + str(id)
-    discipline = "Discipline " + str(random.randint(1, 5))
+    discipline = "Discipline " + str(random.randint(1, 10))
     val.append((id, name, discipline, 0, "[]", -1))
 
 mycursor.executemany(sql, val)
@@ -40,7 +40,7 @@ mycursor.executemany(sql, val)
 # Lecturers
 sql = "INSERT INTO lecturers (id, name, lectures) VALUES (%s, %s, %s)"
 val = []
-for id in range(0, 20):
+for id in range(0, 100):
     name = "Lecturer " + str(id)
     val.append((id, name, "[]"))
 
@@ -50,7 +50,7 @@ mycursor.executemany(sql, val)
 sql = "INSERT INTO classes (id, name, no_students, lectures) VALUES (%s, %s, %s, %s)"
 val = []
 class_size = []
-for id in range(0, 30):
+for id in range(0, 500):
     name = "Course " + str(id)
     no_students = str(random.randint(10, 150))
     class_size.append(no_students)
@@ -63,8 +63,8 @@ sql = "INSERT INTO locations (id, name, capacity, discipline) VALUES (%s, %s, %s
 val = []
 for id in range(0, 30):
     name = "Room " + str(id)
-    capacity = random.randint(3, 30) * 10
-    discipline = "Discipline " + str(random.randint(1, 5))
+    capacity = random.randint(4, 50) * 10
+    discipline = "Discipline " + str(random.randint(1, 10))
     val.append((id, name, capacity, discipline))
 
 mycursor.executemany(sql, val)
@@ -109,12 +109,12 @@ mycursor.executemany(sql, val)
 
 # Give each lecture a lecturer
 lects_by_lecturer = {}
-for lecture_id in range(0, 50):
+for lecture_id in range(0, 500):
     print(lecture_id)
-    lecturer_id = random.randint(0,19)
+    lecturer_id = random.randint(0,99)
     while lecturer_id in lects_by_lecturer.keys() and len(lects_by_lecturer[lecturer_id]) > 10:
-        lecturer_id = random.randint(0,19)
-    if lecturer_id in  lects_by_lecturer.keys():
+        lecturer_id = random.randint(0,99)
+    if lecturer_id in lects_by_lecturer.keys():
         lects_by_lecturer[lecturer_id].append(lecture_id)
     else:
         lects_by_lecturer[lecturer_id] = [lecture_id]

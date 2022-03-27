@@ -4,6 +4,9 @@ import random
 import database_new
 import matplotlib.pyplot as plt
 
+import files
+import update
+
 global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
 
 
@@ -17,27 +20,59 @@ def getDataFromDatabase():
 
 
 def main():
-    # best_tables = []
+    getDataFromDatabase()
+    best_tables = []
     best_scores = []
-    for x in range(100):
-        best_scores.append(runGA())
-    # best_scores.append(score(best_tables[x]))
-    plt.plot(best_scores)
-    plt.show()
+    for x in range(1):
+        best_tables.append(runGA(check_convergence=True, num_gens=15000, min_score=110))
+        best_scores.append(score(best_tables[x]))
+    if best_scores[0] < 0:
+        print("No good timetable found")
+        scoreDetailed(best_tables[0])
+        return
+    scoreDetailed(best_tables[0])
+    files.printTimetableToCSV(best_tables[0],"original")
+    update.main(timetable=best_tables[0])
 
 
-def runGA():
+def runGA(num_gens = 20000, min_score = 110, check_convergence=True, convergence_count=500):
+    global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
     # Generate initial population
-    population = [generateStartingTable(len(lecture_arr), len(location_arr), len(time_arr)) * 100]
-    # Use this to generate new population
-    # avg = []
+    population = [generateStartingTable(len(lecture_arr), len(location_arr), len(time_arr)) for x in range(100)]
     best = []
     x = 0
-    while score(population[0]) < 100 and x < 100000:
-        population = generateNextPopulation(population, 50, 30, 40)
-        best.append(score(population[0]))
-        # avg.append(getAverageScore(population))
-        x = x + 1
+    if check_convergence:
+        converged = False
+        converged_count = 0
+        while score(population[0]) < min_score and x < num_gens and converged is False:
+            new_population = generateNextPopulation(population, 50, 30, 40)
+            # Check if new generation the same as the previous (convergence)
+            if population == new_population:
+
+                converged_count = converged_count + 1
+                # If converged but not passing hard requirements, mix up the population
+                if converged_count == convergence_count and score(population[0]) < 0:
+                    print("oh no "+str(x))
+                    new_population = [generateStartingTable(len(lecture_arr), len(location_arr), len(time_arr)) for x in range(100)]
+                    x = 0
+                elif converged_count == convergence_count:
+                    converged == True
+
+            else:
+                converged_count = 0
+            population = new_population
+            best.append(score(population[0]))
+            x = x + 1
+            if x % 1000 == 0:
+                print(best[-1])
+    else:
+        while score(population[0]) < min_score and x < num_gens:
+            population = generateNextPopulation(population, 50, 30, 40)
+            best.append(score(population[0]))
+            # avg.append(getAverageScore(population))
+            x = x + 1
+            if x % 1000 == 0:
+                print(best[-1])
     # Print best of final population
     print(population[0])
     print(score(population[0]))
@@ -46,7 +81,7 @@ def runGA():
     # plt.show()
     plt.plot(best)
     plt.show()
-    return x
+    return population[0]
 
 
 def score(timetable):
@@ -82,9 +117,14 @@ def score(timetable):
         for lecture_id in range(len(lecture_arr)):
             if lecture_arr[lecture_id].discipline == location_arr[timetable[lecture_id][0]].discipline:
                 total = total + 1
-                # A lecture should not take place in a room that’s too big
-                total = total - math.floor(
-                    (location_arr[timetable[lecture_id][0]].capacity - lecture_arr[lecture_id].no_students) / 20)
+            # A lecture should not take place in a room that’s too big
+            room_cap = location_arr[timetable[lecture_id][0]].capacity
+            extra_space = room_cap - lecture_arr[lecture_id].no_students
+            # Reduce score by 1 for every 10% above 20% of the room that's empty
+            percent_empty = (extra_space / room_cap) * 100
+            while percent_empty > 20:
+                total = total - 2
+                percent_empty = percent_empty - 20
         # Students should not have too many lectures in a row or huge gaps between lectures
         for class_group in class_arr:
             lectures = class_group.lectures
@@ -208,3 +248,77 @@ def getAverageScore(population):
         total = total + score(table)
     total = total / len(population)
     return total
+
+
+def scoreDetailed(timetable):
+    total = 0
+    # Hard requirements
+    # Check if two lectures on in same time and place
+    for x in range(len(timetable)):
+        lecture = lecture_arr[x]
+        if timetable.count(timetable[x]) > 1:
+            total = total - 1
+        # Check if room big enough
+        location = location_arr[timetable[x][0]]
+        if lecture.no_students > location.capacity:
+            total = total - 1
+    # Check if lecturer not free
+    for lecturer in lecturer_arr:
+        lectures = lecturer.lectures
+        lecture_times = [timetable[lecture][1] for lecture in lectures]
+        for time in lecture_times:
+            if lecture_times.count(time) > 1:
+                total = total - 1
+    # Check if class not free
+    for class_group in class_arr:
+        lectures = class_group.lectures
+        lecture_times = [timetable[lecture][1] for lecture in lectures]
+        for time in lecture_times:
+            if lecture_times.count(time) > 1:
+                total = total - 1
+    # Soft Requirements - Only check if hard requirements all pass
+    if total == 0:
+        total = 100
+        # If possible, the lecture should take place in a relevant building
+        for lecture_id in range(len(lecture_arr)):
+            if lecture_arr[lecture_id].discipline == location_arr[timetable[lecture_id][0]].discipline:
+                total = total + 1
+
+            # A lecture should not take place in a room that’s too big
+            room_cap = location_arr[timetable[lecture_id][0]].capacity
+            extra_space = room_cap - lecture_arr[lecture_id].no_students
+            # Reduce score by 1 for every 20% of the room that's empty
+            percent_empty = (extra_space / room_cap) * 100
+            if percent_empty > 20:
+                print("location too big for lecture " + lecture_arr[lecture_id].name + " by percent " + str(
+                    percent_empty))
+            while percent_empty > 20:
+                total = total - 2
+                percent_empty = percent_empty - 20
+        # Students should not have too many lectures in a row or huge gaps between lectures
+        for class_group in class_arr:
+            lectures = class_group.lectures
+            lecture_times = [timetable[lecture][1] for lecture in lectures]
+            gap, run = getGapRun(lecture_times)
+            if gap > 3:
+                print("Class " + str(class_group.id) + " has gap of " + str(gap))
+                total = total - 1
+            if run > 3:
+                print("Class " + str(class_group.id) + " has run of " + str(run))
+                total = total - 1
+        # Lecturers should not have too many lectures in a row or huge gaps between lectures
+        for lecturer in lecturer_arr:
+            lectures = lecturer.lectures
+            lecture_times = [timetable[lecture][1] for lecture in lectures]
+            gap, run = getGapRun(lecture_times)
+            if gap > 3:
+                print("Lecturer " + str(lecturer.id) + " has gap of " + str(gap))
+                total = total - 1
+            if run > 3:
+                print("Lecturer " + str(lecturer.id) + " has run of " + str(run))
+                total = total - 1
+
+    else:
+        print("Hard requirements not passed")
+    return total
+

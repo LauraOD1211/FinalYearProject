@@ -1,6 +1,4 @@
 # Code for updating an existing timetable
-import math
-
 import database_new
 import files
 import random
@@ -16,6 +14,30 @@ def main(imported=False, filename=None, timetable=None):
     else:
         getDataFromDatabase()
     # Call relevant function for desired output
+    # Create random lectures to add
+    new_lectures = []
+    for x in range(10):
+        lecture_id = 50 + x
+        name = "New Lecture " + str(x)
+        disc = "Discipline " + str(random.randint(1, 5))
+        no_classes = random.randint(3,6)
+        classes = []
+        for y in range(no_classes):
+            id = random.randint(0,29)
+            if id not in classes:
+                classes.append(id)
+        no_students = 0
+        for c in classes:
+            no_students = no_students + class_arr[c].no_students
+            class_arr[c].lectures.append(lecture_id)
+        lecturer = random.randint(0,19)
+        lecturer_arr[lecturer].lectures.append(lecture_id)
+        new_lectures.append((database_new.Lecture(lecture_id, name, disc,no_students,lecturer,classes)))
+    best_table = addLectures(new_lectures,timetable)
+    print(best_table)
+    print(scoreUpdate(best_table,timetable,50))
+    scoreUpdateDetailed(best_table, timetable, len(timetable))
+    files.printTimetableToCSV(best_table,"updated")
 
 
 def getDataFromDatabase():
@@ -46,15 +68,15 @@ def addLectures(lectures, timetable):
     # Create initial population based on the old table
     population = []
     for x in range(100):
-        new_table = timetable
-        while len(timetable) < len(lecture_arr):
+        new_table = timetable.copy()
+        while len(new_table) < len(lecture_arr):
             new_table.append([random.randint(1,5),random.randint(1,8)])
         population.append(new_table)
-    for x in range(100):
+    for x in range(10000):
         population = generateNextPopulation(population, timetable, original_lec_count)
     print(population[0])
-    print(scoreUpdate(population[0]))
-    return
+    print(scoreUpdate(population[0], timetable, original_lec_count))
+    return population[0]
 
 
 def generateNextPopulation(curr_pop, original, original_lect_count):
@@ -62,7 +84,7 @@ def generateNextPopulation(curr_pop, original, original_lect_count):
     score_dict = {}
     for x in range(len(curr_pop)):
         table = curr_pop[x]
-        score_dict[x] = scoreUpdate(table)
+        score_dict[x] = scoreUpdate(table, original, original_lect_count)
     # Create next population
     new_pop = []
     while len(new_pop) < len(curr_pop):
@@ -90,15 +112,19 @@ def generateNextPopulation(curr_pop, original, original_lect_count):
             else:
                 new_table.append(second_table[len(first_table) - x - 1])
         # Mutation - change table
-        # Method - randomly reassign one value
-        lecture = random.randint(0, len(lecture_arr) - 1)
-        new_table[lecture] = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
+        # Method - randomly reassign one value (with a greater chance of changing the new lectures values)
+        weights = [1 for x in range(original_lect_count)]
+        while len(weights)<len(lecture_arr):
+            weights.append(100)
+        lecture = random.choices(range(len(lecture_arr)),weights=weights)
+        print(lecture)
+        new_table[lecture[0]] = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
         new_pop.append(new_table)
     # Merge new and old populations into final populations
     # Merge old and new tables
     merged_pop = curr_pop + new_pop
     # Sort population based on scores
-    sorted_merged_pop = sorted(merged_pop, key=lambda i: scoreUpdate(i), reverse=True)
+    sorted_merged_pop = sorted(merged_pop, key=lambda i: scoreUpdate(i, original, original_lect_count), reverse=True)
     # Take best into final
     final_pop = []
     for x in range(len(curr_pop)):
@@ -140,9 +166,14 @@ def scoreUpdate(timetable, original_table, original_lect_count):
         for lecture_id in range(len(lecture_arr)):
             if lecture_arr[lecture_id].discipline == location_arr[timetable[lecture_id][0]].discipline:
                 total = total + 1
-                # A lecture should not take place in a room that’s too big
-                total = total - math.floor(
-                    (location_arr[timetable[lecture_id][0]].capacity - lecture_arr[lecture_id].no_students) / 20)
+            # A lecture should not take place in a room that’s too big
+            room_cap = location_arr[timetable[lecture_id][0]].capacity
+            extra_space = room_cap - lecture_arr[lecture_id].no_students
+            # Reduce score by 1 for every 10% of the room that's empty
+            percent_empty = (extra_space / room_cap) * 100
+            while percent_empty > 20:
+                total = total - 1
+                percent_empty = percent_empty - 20
         # Students should not have too many lectures in a row or huge gaps between lectures
         for class_group in class_arr:
             lectures = class_group.lectures
@@ -162,10 +193,11 @@ def scoreUpdate(timetable, original_table, original_lect_count):
             if run > 3:
                 total = total - 1
     # Then, compare new to original
-    for x in range(original_lect_count):
-        if timetable[x] == original_table[x]:
-            total = total + 1
+        for x in range(original_lect_count):
+            if timetable[x] == original_table[x]:
+                total = total + 1
     return total
+
 
 def getGapRun(lecture_times):
     days = {}
@@ -204,3 +236,87 @@ def getGapRun(lecture_times):
                 else:
                     print("that's not good")
     return longest_gap, longest_run
+
+
+def scoreUpdateDetailed(timetable, original_table, original_lect_count):
+    print(timetable)
+    total = 0
+    # Hard requirements
+    # Check if two lectures on in same time and place
+    for x in range(len(timetable)):
+        lecture = lecture_arr[x]
+        if timetable.count(timetable[x]) > 1:
+            print("collision")
+            total = total - 1
+        # Check if room big enough
+        location = location_arr[timetable[x][0]]
+        if lecture.no_students > location.capacity:
+            print("room too small")
+            total = total - 1
+    # Check if lecturer not free
+    for lecturer in lecturer_arr:
+        lectures = lecturer.lectures
+        lecture_times = [timetable[lecture][1] for lecture in lectures]
+        for time in lecture_times:
+            if lecture_times.count(time) > 1:
+                print("lecturer clash")
+                total = total - 1
+    # Check if class not free
+    for class_group in class_arr:
+        lectures = class_group.lectures
+        lecture_times = [timetable[lecture][1] for lecture in lectures]
+        for time in lecture_times:
+            if lecture_times.count(time) > 1:
+                print("class clash")
+                total = total - 1
+    # Soft Requirements - Only check if hard requirements all pass
+    print(total)
+    if total == 0:
+        total = 100
+        # If possible, the lecture should take place in a relevant building
+        for lecture_id in range(len(lecture_arr)):
+            if lecture_arr[lecture_id].discipline == location_arr[timetable[lecture_id][0]].discipline:
+                total = total + 1
+
+            # A lecture should not take place in a room that’s too big
+            room_cap = location_arr[timetable[lecture_id][0]].capacity
+            extra_space = room_cap - lecture_arr[lecture_id].no_students
+            # Reduce score by 1 for every 20% of the room that's empty
+            percent_empty = (extra_space/room_cap)*100
+            if percent_empty > 20:
+                print("location too big for lecture "+lecture_arr[lecture_id].name+" by percent "+str(percent_empty))
+            while percent_empty > 20:
+                total = total - 1
+                percent_empty = percent_empty - 20
+        # Students should not have too many lectures in a row or huge gaps between lectures
+        for class_group in class_arr:
+            lectures = class_group.lectures
+            lecture_times = [timetable[lecture][1] for lecture in lectures]
+            gap, run = getGapRun(lecture_times)
+            if gap > 3:
+                print("Class " + str(class_group.id) + " has gap of " + str(gap))
+                total = total - 1
+            if run > 3:
+                print("Class " + str(class_group.id) + " has run of " + str(run))
+                total = total - 1
+        # Lecturers should not have too many lectures in a row or huge gaps between lectures
+        for lecturer in lecturer_arr:
+            lectures = lecturer.lectures
+            lecture_times = [timetable[lecture][1] for lecture in lectures]
+            gap, run = getGapRun(lecture_times)
+            if gap > 3:
+                print("Lecturer "+str(lecturer.id)+" has gap of "+str(gap))
+                total = total - 1
+            if run > 3:
+                print("Lecturer " + str(lecturer.id) + " has run of " + str(run))
+                total = total - 1
+        # Then, compare new to original
+        for x in range(original_lect_count):
+            if timetable[x] == original_table[x]:
+                total = total + 1
+            else:
+                print("Timetable slot "+str(x)+" changed")
+    else:
+        print("Hard requirements not passed")
+
+    return total
