@@ -1,7 +1,7 @@
 import math
 import random
-# import setup_new
-import database_new
+# import database_setup
+import database
 import matplotlib.pyplot as plt
 
 import files
@@ -12,11 +12,11 @@ global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
 
 def getDataFromDatabase():
     global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
-    lecture_arr = database_new.getLectures()
-    location_arr = database_new.getLocations()
-    time_arr = database_new.getTimes()
-    lecturer_arr = database_new.getLecturers()
-    class_arr = database_new.getClasses()
+    lecture_arr = database.getLectures()
+    location_arr = database.getLocations()
+    time_arr = database.getTimes()
+    lecturer_arr = database.getLecturers()
+    class_arr = database.getClasses()
 
 
 def main():
@@ -250,7 +250,7 @@ def getAverageScore(population):
     return total
 
 
-##def scoreDetailed(timetable):
+def scoreDetailed(timetable):
     total = 0
     # Hard requirements
     # Check if two lectures on in same time and place
@@ -287,7 +287,7 @@ def getAverageScore(population):
             # A lecture should not take place in a room that’s too big
             room_cap = location_arr[timetable[lecture_id][0]].capacity
             extra_space = room_cap - lecture_arr[lecture_id].no_students
-            # Reduce score by 1 for every 20% of the room that's empty
+            # Reduce score by 2 for every 20% of the room that's empty
             percent_empty = (extra_space / room_cap) * 100
             if percent_empty > 20:
                 print("location too big for lecture " + lecture_arr[lecture_id].name + " by percent " + str(
@@ -295,6 +295,11 @@ def getAverageScore(population):
             while percent_empty > 20:
                 total = total - 2
                 percent_empty = percent_empty - 20
+            # Lectures should not be held after 12 on a friday
+            if time_arr[timetable[lecture_id][1]][0] == "Fri" and time_arr[timetable[lecture_id][1]][1] in ["12pm", "1pm", "2pm", "3pm",
+                                                                                        "4pm", "5pm"]:
+                print(lecture_arr[lecture_id].name + " takes place friday afternoon")
+                total = total - 1
         # Students should not have too many lectures in a row or huge gaps between lectures
         for class_group in class_arr:
             lectures = class_group.lectures

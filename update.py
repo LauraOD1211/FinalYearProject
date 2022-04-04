@@ -1,5 +1,5 @@
 # Code for updating an existing timetable
-import database_new
+import database
 import files
 import random
 
@@ -32,7 +32,7 @@ def main(imported=False, filename=None, timetable=None):
             class_arr[c].lectures.append(lecture_id)
         lecturer = random.randint(0,19)
         lecturer_arr[lecturer].lectures.append(lecture_id)
-        new_lectures.append((database_new.Lecture(lecture_id, name, disc,no_students,lecturer,classes)))
+        new_lectures.append((database.Lecture(lecture_id, name, disc,no_students,lecturer,classes)))
     best_table = addLectures(new_lectures,timetable)
     print(best_table)
     print(scoreUpdate(best_table,timetable,50))
@@ -42,11 +42,11 @@ def main(imported=False, filename=None, timetable=None):
 
 def getDataFromDatabase():
     global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
-    lecture_arr = database_new.getLectures()
-    location_arr = database_new.getLocations()
-    time_arr = database_new.getTimes()
-    lecturer_arr = database_new.getLecturers()
-    class_arr = database_new.getClasses()
+    lecture_arr = database.getLectures()
+    location_arr = database.getLocations()
+    time_arr = database.getTimes()
+    lecturer_arr = database.getLecturers()
+    class_arr = database.getClasses()
 
 
 def getImportData(filename):
@@ -289,8 +289,12 @@ def scoreUpdateDetailed(timetable, original_table, original_lect_count):
             if percent_empty > 20:
                 print("location too big for lecture "+lecture_arr[lecture_id].name+" by percent "+str(percent_empty))
             while percent_empty > 20:
-                total = total - 1
+                total = total - 2
                 percent_empty = percent_empty - 20
+            # Lectures should not take place on Friday afternoon
+            if timetable[lecture_id][1][0] == "Fri" and timetable[lecture_id][1][1] in ["12pm", "1pm", "2pm", "3pm",
+                                                                                        "4pm", "5pm"]:
+                total = total - 1
         # Students should not have too many lectures in a row or huge gaps between lectures
         for class_group in class_arr:
             lectures = class_group.lectures
