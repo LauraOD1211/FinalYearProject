@@ -24,7 +24,7 @@ def main():
     best_tables = []
     best_scores = []
     for x in range(1):
-        best_tables.append(runGA(check_convergence=True, num_gens=15000, min_score=110))
+        best_tables.append(runGA(check_convergence=True, num_gens=50000, min_score=0))
         best_scores.append(score(best_tables[x]))
     if best_scores[0] < 0:
         print("No good timetable found")
@@ -35,7 +35,7 @@ def main():
     update.main(timetable=best_tables[0])
 
 
-def runGA(num_gens = 20000, min_score = 110, check_convergence=True, convergence_count=500):
+def runGA(num_gens = 20000, min_score = 100, check_convergence=True, convergence_count=500):
     global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
     # Generate initial population
     population = [generateStartingTable(len(lecture_arr), len(location_arr), len(time_arr)) for x in range(100)]
@@ -45,10 +45,9 @@ def runGA(num_gens = 20000, min_score = 110, check_convergence=True, convergence
         converged = False
         converged_count = 0
         while score(population[0]) < min_score and x < num_gens and converged is False:
-            new_population = generateNextPopulation(population, 50, 30, 40)
+            new_population = generateNextPopulation(population, len(lecture_arr), len(location_arr), len(time_arr))
             # Check if new generation the same as the previous (convergence)
             if population == new_population:
-
                 converged_count = converged_count + 1
                 # If converged but not passing hard requirements, mix up the population
                 if converged_count == convergence_count and score(population[0]) < 0:
@@ -63,16 +62,13 @@ def runGA(num_gens = 20000, min_score = 110, check_convergence=True, convergence
             population = new_population
             best.append(score(population[0]))
             x = x + 1
-            if x % 1000 == 0:
-                print(best[-1])
     else:
         while score(population[0]) < min_score and x < num_gens:
             population = generateNextPopulation(population, 50, 30, 40)
             best.append(score(population[0]))
             # avg.append(getAverageScore(population))
             x = x + 1
-            if x % 1000 == 0:
-                print(best[-1])
+            print(best[-1])
     # Print best of final population
     print(population[0])
     print(score(population[0]))
@@ -113,18 +109,22 @@ def score(timetable):
     # Soft Requirements - Only check if hard requirements all pass
     if total == 0:
         total = 100
-        # If possible, the lecture should take place in a relevant building
         for lecture_id in range(len(lecture_arr)):
+            # If possible, the lecture should take place in a relevant building
             if lecture_arr[lecture_id].discipline == location_arr[timetable[lecture_id][0]].discipline:
                 total = total + 1
             # A lecture should not take place in a room that’s too big
             room_cap = location_arr[timetable[lecture_id][0]].capacity
             extra_space = room_cap - lecture_arr[lecture_id].no_students
-            # Reduce score by 1 for every 10% above 20% of the room that's empty
+            # Reduce score by 2 for every 20% of the room that's empty
             percent_empty = (extra_space / room_cap) * 100
             while percent_empty > 20:
                 total = total - 2
                 percent_empty = percent_empty - 20
+            # Lectures should not be held after 12 on a friday
+            if time_arr[timetable[lecture_id][1]][0] == "Fri" and time_arr[timetable[lecture_id][1]][1] in ["12pm", "1pm", "2pm", "3pm",
+                                                                                        "4pm", "5pm"]:
+                total = total - 1
         # Students should not have too many lectures in a row or huge gaps between lectures
         for class_group in class_arr:
             lectures = class_group.lectures
@@ -250,7 +250,7 @@ def getAverageScore(population):
     return total
 
 
-def scoreDetailed(timetable):
+##def scoreDetailed(timetable):
     total = 0
     # Hard requirements
     # Check if two lectures on in same time and place

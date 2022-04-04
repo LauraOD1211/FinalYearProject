@@ -117,7 +117,6 @@ def generateNextPopulation(curr_pop, original, original_lect_count):
         while len(weights)<len(lecture_arr):
             weights.append(100)
         lecture = random.choices(range(len(lecture_arr)),weights=weights)
-        print(lecture)
         new_table[lecture[0]] = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
         new_pop.append(new_table)
     # Merge new and old populations into final populations
@@ -169,11 +168,15 @@ def scoreUpdate(timetable, original_table, original_lect_count):
             # A lecture should not take place in a room that’s too big
             room_cap = location_arr[timetable[lecture_id][0]].capacity
             extra_space = room_cap - lecture_arr[lecture_id].no_students
-            # Reduce score by 1 for every 10% of the room that's empty
+            # Reduce score by 2 for every 20% of the room that's empty
             percent_empty = (extra_space / room_cap) * 100
             while percent_empty > 20:
-                total = total - 1
+                total = total - 2
                 percent_empty = percent_empty - 20
+            # Lectures should not take place on Friday afternoon
+            if timetable[lecture_id][1][0] == "Fri" and timetable[lecture_id][1][1] in ["12pm", "1pm", "2pm", "3pm",
+                                                                                        "4pm", "5pm"]:
+                total = total - 1
         # Students should not have too many lectures in a row or huge gaps between lectures
         for class_group in class_arr:
             lectures = class_group.lectures

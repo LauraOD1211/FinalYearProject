@@ -70,7 +70,6 @@ for x in results:
     class_group = ClassGroup(id=x[0], name=x[1], no_students=x[2], lectures=lectures)
     class_arr.append(class_group)
 
-
 # Get all locations
 cursor.execute("SELECT * FROM locations")
 
@@ -108,9 +107,11 @@ def getClasses():
 
 
 def getTimes():
+    days = ["Mon", "Tue", "Wed", "Thur", "Fri"]
+    hours = ["9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm"]
     times = []
-    for x in range(1, 6):
-        for y in range(1, 9):
-            time = [str(x),str(y)]
+    for x in range(len(days)):
+        for y in range(len(hours)):
+            time = [days[x], hours[y]]
             times.append(time)
     return times

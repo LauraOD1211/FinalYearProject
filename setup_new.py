@@ -50,7 +50,7 @@ mycursor.executemany(sql, val)
 sql = "INSERT INTO classes (id, name, no_students, lectures) VALUES (%s, %s, %s, %s)"
 val = []
 class_size = []
-for id in range(0, 500):
+for id in range(0, 300):
     name = "Course " + str(id)
     no_students = str(random.randint(10, 150))
     class_size.append(no_students)
@@ -76,12 +76,12 @@ sql = "INSERT INTO enrollments (lecture, class_group) VALUES (%s, %s)"
 val = []
 lects_by_class = {}
 # Give each lecture students
-for lecture_id in range(0, 50):
+for lecture_id in range(0, 500):
     no_students = 0
     class_set = []
     num_courses = random.randint(1, 5)
     while len(class_set) < num_courses and no_students < 200:
-        class_id = random.randint(0, 29)
+        class_id = random.randint(0, 299)
         while class_id in class_set:
             class_id = class_id + 1
         if class_id not in lects_by_class.keys() or len(lects_by_class[class_id]) < 8:
@@ -105,7 +105,7 @@ for class_id in lects_by_class.keys():
     valClass = (str(lects_by_class[class_id]), class_id)
     mycursor.execute(sqlClass, valClass)
 
-mycursor.executemany(sql, val)
+
 
 # Give each lecture a lecturer
 lects_by_lecturer = {}
