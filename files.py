@@ -1,6 +1,6 @@
 # Functions for importing and exporting timetables as files
 import pickle
-import database_new
+import database
 
 # Import details from database
 global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
@@ -8,11 +8,11 @@ global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
 
 def getDataFromDatabase():
     global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
-    lecture_arr = database_new.getLectures()
-    location_arr = database_new.getLocations()
-    time_arr = database_new.getTimes()
-    lecturer_arr = database_new.getLecturers()
-    class_arr = database_new.getClasses()
+    lecture_arr = database.getLectures()
+    location_arr = database.getLocations()
+    time_arr = database.getTimes()
+    lecturer_arr = database.getLecturers()
+    class_arr = database.getClasses()
 
 
 def importTimetable(filename):
