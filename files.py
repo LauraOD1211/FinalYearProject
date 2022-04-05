@@ -53,18 +53,20 @@ def printTimetableToCSV(timetable, name):
             time_dict[timetable[lecture_id][1]].add((lecture_id, timetable[lecture_id][0]))
         else:
             time_dict[timetable[lecture_id][1]] = {(lecture_id, timetable[lecture_id][0])}
-    f = open("output/timetable"+name+".csv", "w")
+    f = open("output/timetable" + name + ".csv", "w")
     f.write("")
     f.close()
-    f = open("output/timetable"+name+".csv", "a")
+    f = open("output/timetable" + name + ".csv", "a")
     for time in range(len(time_arr)):
         if time in time_dict:
             for entry in time_dict[time]:
-                out = str(time_arr[time][0]) + "," + str(time_arr[time][1]) + "," + str(lecture_arr[entry[0]].name) + "," + str(location_arr[entry[1]].name) + "," + \
-                      str(lecturer_arr[lecture_arr[entry[0]].lecturer].name) + "," + str(lecture_arr[entry[0]].class_groups) + "\n"
+                out = str(time_arr[time][0]) + "," + str(time_arr[time][1]) + "," + str(lecture_arr[entry[0]].name) + \
+                      "," + str(location_arr[entry[1]].name) + "," + \
+                      str(lecturer_arr[lecture_arr[entry[0]].lecturer].name) + "," + \
+                      str(lecture_arr[entry[0]].class_groups) + "\n "
                 f.write(out)
         else:
-            out =  time_arr[time][0] + "," + time_arr[time][1] + ",,,,\n"
+            out = time_arr[time][0] + "," + time_arr[time][1] + ",,,,\n"
             f.write(out)
     f.close()
 

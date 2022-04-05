@@ -17,9 +17,9 @@ def demo():
         no_classes = random.randint(3, 6)
         classes = []
         for y in range(no_classes):
-            id = random.randint(0, 29)
-            if id not in classes:
-                classes.append(id)
+            class_id = random.randint(0, 29)
+            if class_id not in classes:
+                classes.append(class_id)
         no_students = 0
         for c in classes:
             no_students = no_students + class_arr[c].no_students
@@ -31,8 +31,8 @@ def demo():
              [22, 12], [16, 29], [23, 8], [13, 24], [0, 10], [22, 24], [12, 11], [21, 14], [16, 18], [22, 7], [19, 22],
              [16, 30], [7, 16], [7, 28], [15, 29], [3, 0], [19, 38], [15, 17], [22, 1], [19, 33], [21, 35], [12, 25],
              [28, 22], [13, 10], [3, 13], [12, 13], [19, 18], [16, 15]]
-    #main("add lectures", new_lectures, timetable=table, outfile="add")
-    #main("update lecture", [16, new_lectures[0]],timetable=table, outfile="update")
+    main("add lectures", new_lectures, timetable=table, outfile="add")
+    main("update lecture", [16, new_lectures[0]], timetable=table, outfile="update")
     main("remove room", 16, timetable=table, outfile="remove")
 
 
@@ -141,7 +141,7 @@ def addGenerateNextPop(curr_pop, original_table):
                 new_table.append(second_table[x])
         # Mutation - change table
         # Method - randomly reassign one value (with a greater chance of changing the new lectures values)
-        weights = [1 for x in range(len(original_table))]
+        weights = [1 for _ in range(len(original_table))]
         while len(weights) < len(lecture_arr):
             weights.append(100)
         lecture = random.choices(range(len(lecture_arr)), weights=weights)
@@ -215,7 +215,7 @@ def updateGenerateNextPop(curr_pop, original_table, lecture_index):
     score_dict = {}
     for x in range(len(curr_pop)):
         table = curr_pop[x]
-        score_dict[x] = updateScore(table, original_table, lecture_index)
+        score_dict[x] = updateScore(table, original_table)
     # Create next population
     new_pop = []
     while len(new_pop) < len(curr_pop):
@@ -244,9 +244,10 @@ def updateGenerateNextPop(curr_pop, original_table, lecture_index):
                 new_table.append(second_table[x])
         # Mutation - change table
         # Method - randomly reassign one value (with a greater chance of changing the new lecture values)
-        weights = [1 for x in range(len(original_table))]
+        weights = [1 for _ in range(len(original_table))]
         weights[lecture_index] = 100
         lecture = random.choices(range(len(lecture_arr)), weights=weights)
+        new_entry = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
         while new_entry in new_table:
             new_entry = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
         new_table[lecture[0]] = new_entry
@@ -255,7 +256,7 @@ def updateGenerateNextPop(curr_pop, original_table, lecture_index):
     # Merge old and new tables
     merged_pop = curr_pop + new_pop
     # Sort population based on scores
-    sorted_merged_pop = sorted(merged_pop, key=lambda i: updateScore(i, original_table, lecture_index), reverse=True)
+    sorted_merged_pop = sorted(merged_pop, key=lambda i: updateScore(i, original_table), reverse=True)
     # Take best into final
     final_pop = []
     for x in range(len(curr_pop)):
@@ -263,7 +264,7 @@ def updateGenerateNextPop(curr_pop, original_table, lecture_index):
     return final_pop
 
 
-def updateScore(timetable, original_table, lect_index):
+def updateScore(timetable, original_table):
     # Score table using normal scoring algorithm
     total = score(timetable)
     # Then do special scoring - compare new to original
@@ -296,7 +297,7 @@ def removeSetup(room, timetable):
         new_table = timetable.copy()
         for entry in new_table:
             if entry[0] == room:
-                new_room = random.randint(0, len(location_arr)-1)
+                new_room = random.randint(0, len(location_arr) - 1)
                 while new_room == room:
                     new_room = random.randint(0, len(location_arr) - 1)
                 entry[0] = new_room
@@ -338,7 +339,7 @@ def removeGenerateNextPop(curr_pop, original_table, room):
                 new_table.append(second_table[x])
         # Mutation - change table
         # Method - randomly reassign one value (with higher priority to affected lectures)
-        weights = [1 for x in range(len(original_table))]
+        weights = [1 for _ in range(len(original_table))]
         for x in range(len(original_table)):
             if original_table[x][0] == room:
                 weights[x] = 100
@@ -347,7 +348,7 @@ def removeGenerateNextPop(curr_pop, original_table, room):
         new_entry = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
         while new_entry in new_table or new_entry[0] == room:
             new_entry = [random.randint(0, len(location_arr) - 1), random.randint(0, len(time_arr) - 1)]
-        new_table[lecture[0]] =
+        new_table[lecture[0]] = new_entry
         new_pop.append(new_table)
     # Merge new and old populations into final populations
     # Merge old and new tables

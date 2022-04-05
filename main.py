@@ -44,7 +44,7 @@ def main():
 def runGA(num_gens=20000, min_score=200, check_convergence=True, convergence_count=300):
     global lecture_arr, location_arr, time_arr, lecturer_arr, class_arr
     # Generate initial population
-    population = [generateStartingTable() for x in range(100)]
+    population = [generateStartingTable() for _ in range(100)]
     best = []
     avg = []
     x = 0
@@ -53,18 +53,18 @@ def runGA(num_gens=20000, min_score=200, check_convergence=True, convergence_cou
         converged = False
         converged_count = 0
         while score(population[-1]) < min_score and x < num_gens and converged is False:
-            new_population = generateNextPopulation(population, len(lecture_arr), len(location_arr), len(time_arr))
+            new_population = generateNextPopulation(population)
             # Check if new generation the same as the previous (convergence)
             if population == new_population:
                 converged_count = converged_count + 1
                 # If converged but not passing hard requirements, mix up the population
                 if converged_count == convergence_count and score(population[0]) < 0:
                     print("oh no " + str(x))
-                    new_population = [generateStartingTable(len(lecture_arr), len(location_arr), len(time_arr)) for x in
+                    new_population = [generateStartingTable() for _ in
                                       range(100)]
                     x = 0
                 elif converged_count == convergence_count:
-                    converged == True
+                    converged = True
 
             else:
                 converged_count = 0
@@ -77,7 +77,7 @@ def runGA(num_gens=20000, min_score=200, check_convergence=True, convergence_cou
         print("done")
     else:
         while score(population[0]) < min_score and x < num_gens:
-            population = generateNextPopulation(population, 50, 30, 40)
+            population = generateNextPopulation(population)
             best.append(score(population[0]))
             avg.append(getAverageScore(population))
             x = x + 1
