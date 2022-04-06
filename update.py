@@ -31,9 +31,11 @@ def demo():
              [22, 12], [16, 29], [23, 8], [13, 24], [0, 10], [22, 24], [12, 11], [21, 14], [16, 18], [22, 7], [19, 22],
              [16, 30], [7, 16], [7, 28], [15, 29], [3, 0], [19, 38], [15, 17], [22, 1], [19, 33], [21, 35], [12, 25],
              [28, 22], [13, 10], [3, 13], [12, 13], [19, 18], [16, 15]]
-    main("add lectures", new_lectures, timetable=table, outfile="add")
-    main("update lecture", [16, new_lectures[0]], timetable=table, outfile="update")
-    main("remove room", 16, timetable=table, outfile="remove")
+    table2 = [[19,9],[25,18],[7,12],[23,1],[10,7],[13,13],[29,19],[5,17],[12,20],[16,22],[22,10],[3,14],[23,4],[13,28],[23,28],[25,23],[19,23],[16,35],[5,20],[29,12],[25,15],[23,5],[13,15],[5,21],[3,8],[19,27],[16,19],[22,27],[7,2],[0,8],[5,28],[29,9],[19,14],[10,22],[13,26],[5,36],[23,38],[13,33],[23,42],[23,11],[13,17],[19,41],[23,2],[22,36],[6,12],[23,33],[29,31],[29,22],[3,32],[16,29]]
+    #main("add lectures", new_lectures, timetable=table, outfile="add")
+    #main("update lecture", [16, new_lectures[0]], timetable=table, outfile="update")
+    #main("remove room", 16, timetable=table, outfile="remove")
+    print(scoreDetail(table2))
 
 
 def main(mode, data, imported=False, filename=None, timetable=None, outfile="out"):
@@ -407,23 +409,29 @@ def getGapRun(lecture_times):
                 index = index + 1
             is_gap = False
             while index < len(hours) and hours[index - 1] != day[-1]:
-                if hours[index] in day and not is_gap:
-                    curr_run = curr_run + 1
-                elif hours[index] in day and is_gap:
-                    if curr_gap > longest_gap:
-                        longest_gap = curr_gap
-                    curr_gap = 0
-                    curr_run = 1
-                elif hours[index] not in day and is_gap:
-                    curr_gap = curr_gap + 1
-                elif hours[index] not in day and not is_gap:
-                    if curr_run > longest_run:
-                        longest_run = curr_run
-                    curr_run = 0
-                    curr_gap = 1
+                if hours[index] in day:
+                    if is_gap:
+                        is_gap = False
+                        if curr_gap > longest_gap:
+                            longest_gap = curr_gap
+                        curr_gap = 0
+                        curr_run = 1
+                    else:
+                        curr_run = curr_run + 1
                 else:
-                    print("that's not good")
+                    if is_gap:
+                        curr_gap = curr_gap + 1
+                    else:
+                        is_gap = True
+                        if curr_run > longest_run:
+                            longest_run = curr_run
+                        curr_run = 0
+                        curr_gap = 1
                 index = index + 1
+            if longest_gap < curr_gap:
+                longest_gap = curr_gap
+            if longest_run < curr_run:
+                longest_run = curr_run
     return longest_gap, longest_run
 
 
@@ -495,3 +503,82 @@ def score(timetable):
             if run > 3:
                 total = total - 1
     return total
+
+def scoreDetail(timetable):
+    total = 0
+    # Hard requirements
+    # Check if two lectures on in same time and place
+    for x in range(len(timetable)):
+        lecture = lecture_arr[x]
+        if timetable.count(timetable[x]) > 1:
+            total = total - 1
+        # Check if room big enough
+        location = location_arr[timetable[x][0]]
+        if lecture.no_students > location.capacity:
+            total = total - 1
+    # Check if lecturer not free
+    for lecturer in lecturer_arr:
+        lectures = lecturer.lectures
+        lecture_times = [timetable[lecture][1] for lecture in lectures]
+        for time in lecture_times:
+            if lecture_times.count(time) > 1:
+                total = total - 1
+    # Check if class not free
+    for class_group in class_arr:
+        lectures = class_group.lectures
+        lecture_times = [timetable[lecture][1] for lecture in lectures]
+        for time in lecture_times:
+            if lecture_times.count(time) > 1:
+                total = total - 1
+    # Soft Requirements - Only check if hard requirements all pass
+    if total == 0:
+        total = 200
+        for lecture_id in range(len(lecture_arr)):
+            # If possible, the lecture should take place in a relevant building
+            if lecture_arr[lecture_id].discipline == location_arr[timetable[lecture_id][0]].discipline:
+                total = total + 1
+            else:
+                print("Lecture "+str(lecture_id)+" not in room with correct discipline")
+            # A lecture should not take place in a room that’s too big
+            room_cap = location_arr[timetable[lecture_id][0]].capacity
+            extra_space = room_cap - lecture_arr[lecture_id].no_students
+            # Reduce score by 2 for every 20% of the room that's empty
+            percent_empty = (extra_space / room_cap) * 100
+            if percent_empty > 20:
+                print("Lecture "+str(lecture_id)+" is in a room that is "+str(percent_empty)+"% too big.")
+            while percent_empty > 20:
+                total = total - 2
+                percent_empty = percent_empty - 20
+            # Lectures should not be held after 12 on a friday
+            if time_arr[timetable[lecture_id][1]][0] == "Fri" and time_arr[timetable[lecture_id][1]][1] in ["12pm",
+                                                                                                            "1pm",
+                                                                                                            "2pm",
+                                                                                                            "3pm",
+                                                                                                            "4pm",
+                                                                                                            "5pm"]:
+                total = total - 1
+                print("Lecture "+str(lecture_id)+" is on a Friday afternoon.")
+        # Students should not have too many lectures in a row or huge gaps between lectures
+        for class_group in class_arr:
+            lectures = class_group.lectures
+            lecture_times = [timetable[lecture][1] for lecture in lectures]
+            gap, run = getGapRun(lecture_times)
+            if gap > 3:
+                print(class_group.name + " has a large gap between lectures.")
+                total = total - 1
+            if run > 3:
+                print(class_group.name + " has a large run of lectures.")
+                total = total - 1
+        # Lecturers should not have too many lectures in a row or huge gaps between lectures
+        for lecturer in lecturer_arr:
+            lectures = lecturer.lectures
+            lecture_times = [timetable[lecture][1] for lecture in lectures]
+            gap, run = getGapRun(lecture_times)
+            if gap > 3:
+                print(lecturer.name + " has a large gap between lectures.")
+                total = total - 1
+            if run > 3:
+                print(lecturer.name + " has a large run of lectures.")
+                total = total - 1
+    return total
+

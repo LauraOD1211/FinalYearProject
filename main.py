@@ -23,11 +23,13 @@ def main():
     no_gens = []
     best_scores = []
     for x in range(50):
-        best_table, runs = runGA(check_convergence=True, num_gens=15000, min_score=200)
+        best_table, runs = runGA(check_convergence=True, num_gens=20000, min_score=1000)
         best_tables.append(best_table)
-        files.printTimetableToCSV(best_table, "timetable-run" + str(x) + ".csv")
+        files.printTimetableToCSV(best_table, "bestrun" + str(x))
         best_scores.append(score(best_tables[x]))
         no_gens.append(runs)
+    print(best_scores)
+    print(no_gens)
     plt.plot(best_scores)
     plt.title("Best scoring table after each run")
     plt.xlabel("Run")
@@ -52,7 +54,7 @@ def runGA(num_gens=20000, min_score=200, check_convergence=True, convergence_cou
     if check_convergence:
         converged = False
         converged_count = 0
-        while score(population[-1]) < min_score and x < num_gens and converged is False:
+        while score(population[0]) < min_score and x < num_gens and converged is False:
             new_population = generateNextPopulation(population)
             # Check if new generation the same as the previous (convergence)
             if population == new_population:
@@ -254,23 +256,29 @@ def getGapRun(lecture_times):
                 index = index + 1
             is_gap = False
             while index < len(hours) and hours[index - 1] != day[-1]:
-                if hours[index] in day and not is_gap:
-                    curr_run = curr_run + 1
-                elif hours[index] in day and is_gap:
-                    if curr_gap > longest_gap:
-                        longest_gap = curr_gap
-                    curr_gap = 0
-                    curr_run = 1
-                elif hours[index] not in day and is_gap:
-                    curr_gap = curr_gap + 1
-                elif hours[index] not in day and not is_gap:
-                    if curr_run > longest_run:
-                        longest_run = curr_run
-                    curr_run = 0
-                    curr_gap = 1
+                if hours[index] in day:
+                    if is_gap:
+                        is_gap = False
+                        if curr_gap > longest_gap:
+                            longest_gap = curr_gap
+                        curr_gap = 0
+                        curr_run = 1
+                    else:
+                        curr_run = curr_run + 1
                 else:
-                    print("that's not good")
+                    if is_gap:
+                        curr_gap = curr_gap + 1
+                    else:
+                        is_gap = True
+                        if curr_run > longest_run:
+                            longest_run = curr_run
+                        curr_run = 0
+                        curr_gap = 1
                 index = index + 1
+            if longest_gap < curr_gap:
+                longest_gap = curr_gap
+            if longest_run < curr_run:
+                longest_run = curr_run
     return longest_gap, longest_run
 
 
@@ -364,4 +372,5 @@ def scoreDetailed(timetable):
     return total
 
 
-update.demo()
+main()
+#update.demo()
